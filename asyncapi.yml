@@ -1,0 +1,133 @@
+asyncapi: '2.0.0'
+id: 'urn:com:axway:amplify-streams'
+info:
+  title: AMPLIFY Streams SaaS
+  version: '(v1)'
+  description: |
+    Axway AMPLIFY Streams augments your application programming interface (API) infrastructure with an event-driven layer for publishing data from your APIs. 
+    This is possible by making the APIs available as real-time streams of events that can be consumed by web, mobile or other applications as well as servers. 
+    Go beyond the traditional request-response paradigm and its limitations. 
+    AMPLIFY Streams uses server-sent events (SSE) and JSON Patch to push only new data to subscribed clients.
+    
+    #### Check out its awesome features:
+    * Up to 90% reduction of cost of data sharing
+    * Reduced onboarding time of new partners from 3 months to 3 hours
+    * Significant decrease in bandwidth/network consumption
+    * Enhanced UX experience for end user
+  contact:
+    name: Streams Support
+    url: http://support.axway.com
+    email: support@axway.com
+  license:
+    name: Axway EULA
+    url: https://support.axway.com/
+
+servers:
+  production:
+      url: streamdata.motwin.net
+      description: AMPLIFY Streams SaaS
+      protocol: https
+      security:
+        - appToken: []
+
+defaultContentType: text/event-stream
+
+channels:
+  /{targetAPI}:
+    description: Stream of change events detected on the target API.
+    parameters:
+      targetAPI:
+        description: The URL of the target API you want to stream.
+        schema:
+          type: string
+    subscribe:
+      summary: Subscribe to receive a first snapshop followed by incremental updates (patches) representing the changes detected.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/snapshot'
+          - $ref: '#/components/messages/patch'
+        
+components:
+  messages:
+    snapshot:
+      name: snapshot
+      title: Initial snapshot
+      summary: Initial event containing the snapshot of data returned by the target API. 
+      headers:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Unique identifier of the event
+          event:
+            type: string
+            description: Type of the event     
+        example: >-
+          id: d8eee0ed-4c4a-466c-845c-e1b79457ab29
+          event: data
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            description: 'Json object representing a snapshot of the data returned by the target API'
+        additionalProperties: false
+        example: "data: {'baz': 'qux', 'foo': 'bar'}" 
+    patch:
+      name: patch
+      title: Patch
+      summary: List of patch operations to apply to the initial snapshot
+      headers:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Unique identifier of the event
+          event:
+            type: string
+            description: Type of the event     
+        example: >-
+          id: d8eee0ed-4c4a-466c-845c-e1b79457ab29
+          event: patch
+      payload:
+        properties:
+          data:
+            description: 
+            type: array
+            items:
+              type: Json Patch Operation
+              $ref: '#/components/schemas/jsonPatchOp'
+        example: 'data: [{ "op": "replace", "path": "/baz", "value": "boo" }, { "op": "add", "path": "/hello", "value": ["world"] }, { "op": "remove", "path": "/foo" }]'
+  schemas:     
+    jsonPatchOp:
+      type: object
+      properties:
+        op:
+          type: string
+          enum:
+          - add
+          - remove
+          - replace
+          - move
+        path:
+          type: string
+        value:
+          type: string
+      required:
+      - op
+      - path
+                
+    jsonPointer:
+      type: string
+      pattern: '^(/[^/~]*(~[01][^/~]*)*)*$'  
+          
+  securitySchemes:
+    appToken:
+      type: httpApiKey
+      name: X-Sd-Token
+      in: header
+      description: 'Register on https://portal.streamdata.io/#/register to get your Streams app token.'
+
+externalDocs:
+  description: 'Online documentation'
+  url: https://docs.axway.com/bundle/Streams_allOS_en_HTML/page/amplify_streams.html
